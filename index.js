@@ -473,12 +473,6 @@ trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${argoDomain}&fp=firefox&typ
       fs.writeFileSync(subPath, Buffer.from(subTxt).toString('base64'));
       console.log(`${FILE_PATH}/sub.txt saved successfully`);
       uploadNodes();
-      // 将内容进行 base64 编码并写入 SUB_PATH 路由
-      app.get(`/${SUB_PATH}`, (req, res) => {
-        const encodedContent = Buffer.from(subTxt).toString('base64');
-        res.set('Content-Type', 'text/plain; charset=utf-8');
-        res.send(encodedContent);
-      });
       resolve(subTxt);
       }, 2000);
     });
@@ -620,6 +614,17 @@ app.get("/", async function(req, res) {
     res.send(data);
   } catch (err) {
     res.send("Hello world!<br><br>You can access /{SUB_PATH}(Default: /sub) to get your nodes!");
+  }
+});
+
+// 订阅路由 - 提前注册，从 sub.txt 文件读取，避免等待 ArgoDomain 才注册
+app.get(`/${SUB_PATH}`, (req, res) => {
+  if (fs.existsSync(subPath)) {
+    const content = fs.readFileSync(subPath, 'utf-8');
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.send(content);
+  } else {
+    res.status(503).set('Content-Type', 'text/plain; charset=utf-8').send('Nodes not ready yet, please retry in 30 seconds');
   }
 });
 
